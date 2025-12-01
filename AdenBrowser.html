@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aden Browser</title>
+  <meta name="description" content="Aden Browser — Premium minimal search page. Dark glass, neon green accents. Multi-search engines + local accounts."/>
+  <style>
+    /* --- Base / Responsive / FHD-ready --- */
+    :root{
+      --bg:#050505;
+      --glass: rgba(255,255,255,0.03);
+      --neon:#14ff9a;
+      --muted:#9aa6a1;
+      --card-radius:18px;
+      --blur:14px;
+      --content-width:1200px;
+      --max-input:860px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;color:#eafff3;background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    body{display:flex;align-items:center;justify-content:center;padding:40px}
+    .stage{width:min(var(--content-width),96%);display:flex;flex-direction:column;align-items:center;gap:28px;position:relative;z-index:2}
+
+    /* subtle decorative background (keeps page premium but minimal) */
+    .bg-svg{position:fixed;inset:0;opacity:0.06;pointer-events:none;background-image:
+      radial-gradient(640px 320px at 8% 12%, rgba(20,255,154,0.04), transparent 6%),
+      radial-gradient(520px 260px at 92% 88%, rgba(20,255,154,0.025), transparent 6%);filter:blur(6px);z-index:0}
+
+    /* Card area (centered like Google) */
+    .card{
+      width:100%;
+      max-width:var(--max-input);
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      align-items:center;
+      padding:34px 28px;
+      border-radius:calc(var(--card-radius));
+      background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      backdrop-filter: blur(var(--blur));
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow:0 18px 50px rgba(0,0,0,0.65);
+    }
+
+    /* Logo - minimal SVG/wordmark */
+    .logo{
+      display:flex;align-items:center;gap:12px;
+      transform: translateY(2px);
+    }
+    .logo svg{width:72px;height:48px}
+    .brand{font-weight:700;font-size:34px;color:var(--neon);letter-spacing:0.6px}
+    .tag{font-size:13px;color:var(--muted);margin-top:-6px}
+
+    /* Search row */
+    .search-row{width:100%;display:flex;align-items:center;gap:12px}
+    .search-field{flex:1;position:relative;display:flex;align-items:center;gap:10px}
+    .search-field input{
+      width:100%;
+      padding:16px 18px 16px 46px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.03);
+      background:rgba(0,0,0,0.45);
+      color:#e9fff2;
+      font-size:18px;
+      outline:none;
+      transition:box-shadow .12s,transform .08s;
+    }
+    .search-field input:focus{
+      box-shadow:0 12px 40px rgba(20,255,154,0.06);
+      transform:translateY(-1px);
+    }
+    .search-field .magnifier{
+      position:absolute;left:14px;font-size:18px;opacity:0.9;
+      pointer-events:none;
+    }
+
+    /* Buttons cluster */
+    .actions{display:flex;gap:10px}
+    .btn{padding:11px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:var(--muted);font-weight:600;cursor:pointer}
+    .btn.primary{color:var(--neon);border:1px solid rgba(20,255,154,0.16);background:linear-gradient(180deg, rgba(20,255,154,0.03), rgba(20,255,154,0.01))}
+
+    /* Footer small text */
+    .controls-line{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:13px}
+
+    /* Bottom area: preferences in compact line */
+    .prefs{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:6px}
+    .select, .small-input { padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:rgba(0,0,0,0.35);color:#eafff3;font-size:13px }
+
+    /* Right side panel (hidden in minimal view via toggle) */
+    .panel{
+      width:360px;
+      padding:18px;border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      backdrop-filter: blur(10px);
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow:0 12px 40px rgba(0,0,0,0.55);
+      display:none; /* hidden by default to keep minimal; alt+P toggles */
+      flex-direction:column;gap:12px;
+    }
+
+    /* profile */
+    .profile{display:flex;gap:12px;align-items:center}
+    .avatar{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg, rgba(20,255,154,0.06),transparent);display:flex;align-items:center;justify-content:center;color:var(--neon);font-weight:800;font-size:20px}
+    .profile .meta{display:flex;flex-direction:column}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* engine list */
+    .engine-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .engine-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.02);font-size:14px}
+
+    /* simple responsive */
+    @media (min-width:1300px){
+      .stage{gap:36px}
+      .card{padding:44px 36px}
+      .brand{font-size:40px}
+      .logo svg{width:92px;height:60px}
+      :root{--max-input:1100px}
+    }
+    @media (max-width:980px){
+      .panel{display:none}
+      body{padding:18px}
+      .card{max-width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-svg" aria-hidden="true"></div>
+
+  <div class="stage" role="main" aria-label="Aden search">
+    <div class="card" role="region" aria-label="Aden search card">
+      <!-- Logo / wordmark -->
+      <div class="logo" aria-hidden="false">
+        <!-- Minimal SVG mark -->
+        <div>
+          <!-- ADEN BROWSER PREMIUM REVISION WILL BE GENERATED HERE -->
+<div class="brand" style="text-align:center;margin-top:40px;margin-bottom:20px;">
+  <h1 style="
+    font-size:52px;
+    font-weight:800;
+    letter-spacing:-1px;
+    color:#14ff9a;
+    background:linear-gradient(135deg,#14ff9a 0%,#9affc8 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    filter:drop-shadow(0 0 14px rgba(20,255,154,0.25));
+    transition:0.35s ease;
+  "
+  onmouseover="this.style.filter='drop-shadow(0 0 22px rgba(20,255,154,0.45))'"
+  onmouseout="this.style.filter='drop-shadow(0 0 14px rgba(20,255,154,0.25))'"
+  >Aden Browser</h1>
+</div>
+<footer style="position:fixed;bottom:0;left:0;width:100%;text-align:center;padding:8px 0;font-size:14px;color:#aaa;backdrop-filter:blur(6px);background:rgba(0,0,0,0.25);border-top:1px solid rgba(255,255,255,0.05)"><b>© Copyright Hodei Arranz</b></footer>
+
+          <div class="tag"></div>
+        </div>
+      </div>
+
+      <!-- Search row -->
+      <div class="search-row" role="search" aria-label="Caja de búsqueda principal">
+        <div class="search-field" style="flex:1">
+          <span class="magnifier">🔍</span>
+          <input id="q" type="search" inputmode="search" placeholder="Busca lo que quieras..." aria-label="Buscar en Aden">
+        </div>
+
+        <div class="actions" role="group" aria-label="Acciones de búsqueda">
+          <button id="searchBtn" class="btn primary" title="Buscar (Enter)">Buscar</button>
+          <button id="luckyBtn" class="btn" title="Voy a tener suerte">Voy a tener suerte</button>
+        </div>
+      </div>
+
+      <!-- compact controls -->
+      <div class="prefs" role="toolbar" aria-label="Preferencias rápidas">
+        <select id="engineSelect" class="select" title="Selecciona motor de búsqueda"></select>
+        <input id="customEngineName" class="small-input" placeholder="Añadir motor (nombre)" title="Nombre opcional para motor personalizado" />
+        <input id="customEngineURL" class="small-input" placeholder="Plantilla URL, usa {q}" title="Ej: https://www.example.com/search?q={q}" />
+        <button id="addEngine" class="btn">Agregar</button>
+
+        <label style="display:flex;gap:6px;align-items:center"><input id="openNewTab" type="checkbox" checked> Nueva pestaña</label>
+        <label style="display:flex;gap:6px;align-items:center"><input id="soundToggle" type="checkbox"> Sonido</label>
+        <button id="panelToggle" class="btn" title="Panel lateral (Alt+P)">Panel</button>
+      </div>
+
+      <div class="controls-line" aria-hidden="true">
+        <div style="display:flex;gap:12px;align-items:center">
+          <span class="small">Atajos: <kbd>/</kbd> foco • <kbd>Alt+P</kbd> panel</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional right panel (hidden by default for ultra minimal feel) -->
+    <aside class="panel" id="panel" aria-label="Panel Aden">
+      <!-- Profile -->
+      <div class="profile" id="profileBlock">
+        <div class="avatar" id="avatar" title="Haz click para cerrar sesión">A</div>
+        <div class="meta">
+          <div id="profileName" style="font-weight:700">Invitado</div>
+          <div id="profileEmail" class="small">Sin sesión</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="openLogin" class="btn">Iniciar sesión</button>
+        <button id="openSignup" class="btn">Crear cuenta</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div style="font-weight:700;margin-bottom:8px">Motores guardados</div>
+        <div class="engine-list" id="engineList" aria-live="polite"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div style="font-weight:700;margin-bottom:8px">Historial local</div>
+        <div id="recentMini" class="small">Sin búsquedas recientes</div>
+        <div style="margin-top:8px;display:flex;gap:8px"><button id="clearRecent" class="btn">Borrar</button><button id="exportData" class="btn">Exportar</button></div>
+      </div>
+
+      <div style="margin-top:12px;color:var(--muted);font-size:13px">Aden Premium • Cuentas y datos guardados en tu navegador (localStorage).</div>
+    </aside>
+  </div>
+
+  <!-- Modal container -->
+  <div id="modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:99">
+    <div style="width:520px;max-width:94%;background:rgba(255,255,255,0.02);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <strong id="modalTitle">Modal</strong>
+        <button id="modalClose" class="btn">Cerrar</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- Sound (click) -->
+  <audio id="clickSound" src="" preload="auto"></audio>
+
+  <script>
+    // ---------- Helpers ----------
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const qInput = $('#q');
+    const searchBtn = $('#searchBtn');
+    const luckyBtn = $('#luckyBtn');
+    const engineSelect = $('#engineSelect');
+    const engineList = $('#engineList');
+    const addEngineBtn = $('#addEngine');
+    const customName = $('#customEngineName');
+    const customUrl = $('#customEngineURL');
+    const openNewTabChk = $('#openNewTab');
+    const soundToggle = $('#soundToggle');
+    const panel = $('#panel');
+    const panelToggle = $('#panelToggle');
+    const modal = $('#modal');
+    const modalContent = $('#modalContent');
+    const modalTitle = $('#modalTitle');
+    const modalClose = $('#modalClose');
+    const clickSound = $('#clickSound');
+    const recentMini = $('#recentMini');
+    const clearRecentBtn = $('#clearRecent');
+    const exportDataBtn = $('#exportData');
+    const avatarEl = $('#avatar');
+    const profileNameEl = $('#profileName');
+    const profileEmailEl = $('#profileEmail');
+    const openLogin = $('#openLogin');
+    const openSignup = $('#openSignup');
+
+    // ---------- Storage keys ----------
+    const ENGINES_KEY = 'aden_engines_v2';
+    const RECENT_KEY = 'aden_recent_v2';
+    const ACCOUNTS_KEY = 'aden_accounts_v2';
+    const SESSION_KEY = 'aden_session_v2';
+
+    // ---------- Predefined engines (name + url template where {q} is query) ----------
+    const DEFAULT_ENGINES = [
+      ['Google', 'https://www.google.com/search?q={q}'],
+      ['Bing', 'https://www.bing.com/search?q={q}'],
+      ['DuckDuckGo', 'https://duckduckgo.com/?q={q}'],
+      ['Brave', 'https://search.brave.com/search?q={q}'],
+      ['Yahoo', 'https://search.yahoo.com/search?p={q}'],
+      ['StartPage', 'https://www.startpage.com/sp/search?q={q}'],
+      ['Qwant', 'https://www.qwant.com/?q={q}'],
+      ['Ecosia', 'https://www.ecosia.org/search?q={q}'],
+      ['Mojeek', 'https://www.mojeek.com/search?q={q}'],
+      ['You.com', 'https://you.com/search?q={q}'],
+      ['Yandex', 'https://yandex.com/search/?text={q}'],
+      ['Naver', 'https://search.naver.com/search.naver?query={q}'],
+      ['Baidu', 'https://www.baidu.com/s?wd={q}'],
+    ];
+
+    // ---------- Utils ----------
+    function safeJSON(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) || fallback }catch(e){ return fallback } }
+    function saveJSON(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+    function playClick(){ if(!soundToggle.checked) return; /* cheap beep using WebAudio */ try{ const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.000; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.linearRampToValueAtTime(0.06, ctx.currentTime+0.001); g.gain.linearRampToValueAtTime(0, ctx.currentTime+0.11); o.stop(ctx.currentTime+0.12); }catch(e){} }
+
+    // ---------- Engines management ----------
+    function loadEngines(){
+      let engines = safeJSON(ENGINES_KEY, null);
+      if(!engines){
+        engines = DEFAULT_ENGINES.map(e=>({name:e[0],url:e[1]}));
+        saveJSON(ENGINES_KEY, engines);
+      }
+      return engines;
+    }
+    function renderEngineSelect(){
+      const engines = loadEngines();
+      engineSelect.innerHTML = '';
+      engines.forEach((e,i)=>{
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = e.name;
+        engineSelect.appendChild(opt);
+      });
+      renderEngineList();
+    }
+    function renderEngineList(){
+      const engines = loadEngines();
+      engineList.innerHTML = '';
+      engines.forEach((e,idx)=>{
+        const row = document.createElement('div'); row.className='engine-item';
+        row.innerHTML = `<div style="font-weight:600">${e.name}</div><div style="display:flex;gap:8px"><button class="btn" data-idx="${idx}" title="Usar">Usar</button><button class="btn" data-edit="${idx}" title="Editar">✎</button><button class="btn" data-del="${idx}" title="Eliminar">🗑</button></div>`;
+        engineList.appendChild(row);
+      });
+    }
+    function addEngine(name, url){
+      if(!url || !url.includes('{q}')){ alert('La URL debe contener {q} donde se inserta la búsqueda'); return; }
+      const engines = loadEngines(); engines.push({name: name || `Custom ${engines.length+1}`, url}); saveJSON(ENGINES_KEY, engines); renderEngineSelect();
+    }
+    function editEngine(idx, name, url){
+      const engines = loadEngines(); engines[idx] = {name, url}; saveJSON(ENGINES_KEY, engines); renderEngineSelect();
+    }
+    function delEngine(idx){
+      const engines = loadEngines(); engines.splice(idx,1); saveJSON(ENGINES_KEY, engines); renderEngineSelect();
+    }
+
+    // ---------- Recent management ----------
+    function getRecent(){ return safeJSON(RECENT_KEY, []); }
+    function addRecent(q){
+      if(!q) return;
+      const r = getRecent();
+      r.unshift({q:q.trim(), t:Date.now()});
+      const unique = []; const dedup = [];
+      for(const item of r){
+        if(!dedup.includes(item.q)){ dedup.push(item.q); unique.push(item); }
+        if(unique.length>=30) break;
+      }
+      saveJSON(RECENT_KEY, unique);
+      renderRecentMini();
+    }
+    function clearRecent(){ localStorage.removeItem(RECENT_KEY); renderRecentMini(); }
+    function renderRecentMini(){
+      const r = getRecent();
+      if(!r.length){ recentMini.textContent = 'Sin búsquedas recientes'; return; }
+      recentMini.innerHTML = r.slice(0,6).map(it=>`<div style="margin-bottom:6px"><a href="#" class="recent-link" data-q="${encodeURIComponent(it.q)}">${escapeHtml(it.q)}</a></div>`).join('');
+      $$('.recent-link').forEach(a=> a.addEventListener('click', e=>{ e.preventDefault(); const val=decodeURIComponent(a.dataset.q); qInput.value=val; doSearch(val); }));
+    }
+
+    // ---------- Accounts (improved local multi-user) ----------
+    function loadAccounts(){ return safeJSON(ACCOUNTS_KEY, {}); }
+    function saveAccounts(obj){ saveJSON(ACCOUNTS_KEY, obj); }
+    function currentSession(){ return localStorage.getItem(SESSION_KEY) || null; }
+    function setSession(email){ if(email) localStorage.setItem(SESSION_KEY, email); else localStorage.removeItem(SESSION_KEY); renderProfile(); }
+    function createAccount(name, email, pass){
+      const acc = loadAccounts();
+      if(acc[email]) return {ok:false, msg:'Cuenta ya existe'};
+      acc[email] = {name, pass, created:Date.now(), prefs:{}};
+      saveAccounts(acc); setSession(email); return {ok:true};
+    }
+    function loginAccount(email, pass){
+      const acc=loadAccounts();
+      if(!acc[email]) return {ok:false,msg:'Cuenta no existe'};
+      if(acc[email].pass !== pass) return {ok:false,msg:'Contraseña incorrecta'};
+      setSession(email); return {ok:true};
+    }
+    function logout(){ setSession(null); }
+
+    function renderProfile(){
+      const email = currentSession();
+      if(!email){ profileNameEl.textContent='Invitado'; profileEmailEl.textContent='Sin sesión'; avatarEl.textContent='A'; return; }
+      const acc = loadAccounts()[email];
+      if(!acc){ logout(); renderProfile(); return; }
+      profileNameEl.textContent = acc.name || email.split('@')[0];
+      profileEmailEl.textContent = email;
+      avatarEl.textContent = (acc.name?acc.name[0].toUpperCase():email[0].toUpperCase());
+    }
+
+    // ---------- Modal handling ----------
+    function openModal(title, html, onshow){
+      modalTitle.textContent = title; modalContent.innerHTML = html; modal.style.display='flex';
+      if(onshow) onshow();
+    }
+    function closeModal(){ modal.style.display='none'; modalContent.innerHTML=''; }
+    modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+    // ---------- Escape helpers ----------
+    function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    // ---------- Search actions ----------
+    function getEngineObj(idx = null){
+      const engines = loadEngines();
+      const selIndex = (idx !== null) ? idx : Number(engineSelect.value || 0);
+      return engines[selIndex] || engines[0];
+    }
+    function formatUrl(template, query){ return template.replace(/\{q\}/g, encodeURIComponent(query)); }
+
+    function openUrl(url){
+      if(openNewTabChk.checked) window.open(url, '_blank', 'noopener');
+      else window.location.href = url;
+      playClick();
+    }
+
+    function doSearch(value){
+      const v = (typeof value === 'string') ? value.trim() : qInput.value.trim();
+      if(!v) return;
+      addRecent(v);
+      const engine = getEngineObj();
+      openUrl(formatUrl(engine.url, v));
+    }
+    function doLucky(value){
+      const v = (typeof value === 'string') ? value.trim() : qInput.value.trim();
+      if(!v) return;
+      addRecent(v);
+      const engine = getEngineObj();
+      // "I'm feeling lucky" support for Google only; fallback to normal for others
+      if(engine.name.toLowerCase().includes('google')){
+        openUrl(formatUrl(engine.url + '&btnI=1', v));
+      } else {
+        openUrl(formatUrl(engine.url, v));
+      }
+    }
+
+    // ---------- Wiring UI ----------
+    searchBtn.addEventListener('click', ()=> doSearch());
+    luckyBtn.addEventListener('click', ()=> doLucky());
+    qInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') doSearch(); });
+
+    // add engine
+    addEngineBtn.addEventListener('click', ()=>{
+      const name = customName.value.trim();
+      const url = customUrl.value.trim();
+      if(!url){ alert('Introduce la URL con {q}'); return; }
+      addEngine(name, url);
+      customName.value=''; customUrl.value='';
+    });
+
+    // engine list actions (delegate)
+    engineList.addEventListener('click', e=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      if(btn.dataset.idx !== undefined){
+        const idx = Number(btn.dataset.idx);
+        engineSelect.value = idx;
+        alert('Motor seleccionado: ' + loadEngines()[idx].name);
+      } else if(btn.dataset.edit !== undefined){
+        const idx = Number(btn.dataset.edit);
+        const eng = loadEngines()[idx];
+        openModal('Editar motor', `
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="editName" placeholder="Nombre" value="${escapeHtml(eng.name)}"/>
+            <input id="editUrl" placeholder="URL con {q}" value="${escapeHtml(eng.url)}"/>
+            <div style="display:flex;justify-content:flex-end"><button id="saveEdit" class="btn primary">Guardar</button></div>
+          </div>
+        `, ()=>{
+          $('#saveEdit').addEventListener('click', ()=>{
+            const name = $('#editName').value.trim(); const url = $('#editUrl').value.trim();
+            if(!url.includes('{q')){ alert('La URL debe contener {q}'); return; }
+            editEngine(idx, name || eng.name, url);
+            closeModal();
+          });
+        });
+      } else if(btn.dataset.del !== undefined){
+        const idx = Number(btn.dataset.del);
+        if(confirm('Eliminar motor "'+loadEngines()[idx].name+'"?')){ delEngine(idx); }
+      }
+    });
+
+    // render select & list on load
+    renderEngineSelect();
+
+    // render recent
+    renderRecentMini();
+
+    // panel toggle
+    panelToggle.addEventListener('click', ()=> { panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex'; });
+    document.addEventListener('keydown', (e)=> { if(e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); qInput.focus(); qInput.select(); } if(e.altKey && e.key.toLowerCase()==='p'){ panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex'; } });
+
+    // clear recent
+    clearRecentBtn.addEventListener('click', ()=>{ if(confirm('Borrar historial local?')) { clearRecent(); alert('Historial borrado'); } });
+
+    // export data (engines + recent + accounts) simple json download
+    exportDataBtn.addEventListener('click', ()=>{
+      const payload = {
+        engines: loadEngines(),
+        recent: getRecent(),
+        accounts: loadAccounts(),
+        session: currentSession()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'aden-backup.json'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    });
+
+    // ---------- Accounts modal flows ----------
+    openSignup.addEventListener('click', ()=> {
+      openModal('Crear cuenta', `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="suName" placeholder="Nombre (visible)"/>
+          <input id="suEmail" placeholder="Email"/>
+          <input id="suPass" type="password" placeholder="Contraseña"/>
+          <div style="display:flex;justify-content:flex-end"><button id="doSu" class="btn primary">Crear</button></div>
+          <div class="small">Cuentas guardadas en tu navegador. No compartas contraseñas sensibles.</div>
+        </div>
+      `, ()=>{
+        $('#doSu').addEventListener('click', ()=>{
+          const name = $('#suName').value.trim(); const email = $('#suEmail').value.trim(); const pass = $('#suPass').value;
+          if(!email || !pass){ alert('Email y contraseña son obligatorios'); return; }
+          const res = createAccount(name||email.split('@')[0], email, pass);
+          if(!res.ok) alert(res.msg); else { closeModal(); renderProfile(); alert('Cuenta creada y sesión iniciada'); }
+        });
+      });
+    });
+
+    openLogin.addEventListener('click', ()=> {
+      openModal('Iniciar sesión', `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="liEmail" placeholder="Email"/>
+          <input id="liPass" type="password" placeholder="Contraseña"/>
+          <div style="display:flex;justify-content:flex-end"><button id="doLi" class="btn primary">Entrar</button></div>
+          <div style="display:flex;gap:8px;align-items:center"><input id="keep" type="checkbox"> <span class="small">Mantener sesión</span></div>
+        </div>
+      `, ()=>{
+        $('#doLi').addEventListener('click', ()=>{
+          const email = $('#liEmail').value.trim(); const pass = $('#liPass').value;
+          const res = loginAccount(email, pass);
+          if(!res.ok) alert(res.msg); else { closeModal(); renderProfile(); alert('Sesión iniciada'); }
+        });
+      });
+    });
+
+    // avatar click toggles signout
+    avatarEl.addEventListener('click', ()=>{
+      if(!currentSession()){ alert('No hay sesión iniciada'); return; }
+      if(confirm('Cerrar sesión?')){ logout(); alert('Sesión cerrada'); }
+    });
+
+    // ---------- Voice search (optional) ----------
+    if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.interimResults = false;
+      recognition.addEventListener('result', (ev)=>{
+        const txt = Array.from(ev.results).map(r=>r[0].transcript).join('');
+        qInput.value = txt;
+        doSearch(txt);
+      });
+      // small button in actions if supported
+      const micBtn = document.createElement('button'); micBtn.className='btn'; micBtn.textContent='🎤'; micBtn.title='Buscar por voz';
+      micBtn.addEventListener('click', ()=> recognition.start());
+      document.querySelector('.actions').appendChild(micBtn);
+    }
+
+    // ---------- initial render ----------
+    renderProfile();
+    renderEngineSelect();
+    renderRecentMini();
+
+    // ---------- optionally play click sound (toggle uses WebAudio beep) ----------
+    soundToggle.addEventListener('change', ()=> { if(soundToggle.checked) playClick(); });
+
+    // ---------- small helper to expose to console for debug ----------
+    window.aden = { addEngine, loadEngines, doSearch, doLucky, getRecent, clearRecent, loadAccounts, createAccount, loginAccount };
+  </script>
+</body>
+</html>
